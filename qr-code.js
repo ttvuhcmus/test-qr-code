@@ -77,10 +77,12 @@ class CameraQrScanner {
 
   async checkCameraAvailable() {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoInputs = devices.filter(
-      (device) => device.kind === "videoinput"
-    );
-    console.log(videoInputs); // Hiển thị danh sách camera (front/back nếu có)
+    // const videoInputs = devices.filter(
+    //   (device) => device.kind === "videoinput"
+    // );
+    devices.forEach((device) => {
+      console.log(device);
+    });
     return devices.some((device) => device.kind === "videoinput");
   }
 
