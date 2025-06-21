@@ -106,7 +106,8 @@ class CameraQrScanner {
         {
           fps: 10,
           qrbox: 150,
-          aspectRatio: 1,
+          aspectRatio: 3 / 2,
+          // aspectRatio: 1,
           // aspectRatio: 1, //x/3 / 2,
           // aspectRatio: 3 / 2,
           // qrbox: {
