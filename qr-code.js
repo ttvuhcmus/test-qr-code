@@ -134,7 +134,7 @@ class CameraQrScanner {
           yOffset = (canvasElement.height - renderHeight) / 2;
         }
 
-        canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        canvas.clearRect(0, 0, canvasElement.width, canvasElement.height);
         canvas.drawImage(video, xOffset, yOffset, renderWidth, renderHeight);
 
         const imageData = canvas.getImageData(
