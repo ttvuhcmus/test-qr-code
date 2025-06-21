@@ -25,58 +25,21 @@
         background-color: black; /* Nếu có khoảng trống do tỷ lệ không khớp */
       }
     </style>
-    <script src="./html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <title>Document</title>
   </head>
   <body style="width: 300px">
-    <div class="mb-5" style="position: relative">
-      <div id="reader" style="width: 300px; height: 200px; display: none"></div>
-      <button
-        id="btn-stop-scan"
-        type="button"
-        style="
-          display: none !important;
-          position: absolute;
-          top: 8px;
-          right: 8px;
-        "
-        class="btn rounded-pill btn-xs btn-icon btn-danger"
-      >
-        <span class="ri-close-line"></span>
-      </button>
-
-      <div id="qr-container" class="qr-code-container">
-        <div class="card" style="padding: 8px">
-          <i class="ri-qr-code-fill ri-40px text-primary"></i>
-        </div>
-        <h5 class="mt-2 mb-4" style="font-size: 18; font-weight: 700">
-          QR Scanner
-        </h5>
-
-        <div style="display: flex">
-          <button id="btn-start-scan" class="btn-qr">
-            <i class="ri-camera-line ri-20px"></i>
-            <span style="font-size: 12px" class="mt-1">Camera</span>
-          </button>
-
-          <button id="btn-upload-file" class="btn-qr">
-            <i class="ri-upload-2-line ri-20px"></i>
-            <span style="font-size: 12px" class="mt-1">Upload File</span>
-          </button>
-
-          <button class="btn-qr" style="cursor: auto">
-            <i class="ri-cursor-line ri-20px"></i>
-            <span style="font-size: 12px" class="mt-1">Drag & drop</span>
-          </button>
-        </div>
-
-        <input
-          type="file"
-          id="qr-file-input"
-          accept="image/*"
-          style="display: none"
-        />
-      </div>
+    <div id="loadingMessage">
+      🎥 Unable to access video stream (please make sure you have a webcam
+      enabled)
+    </div>
+    <button id="btn-start-scan" class="btn-qr">
+      <span style="font-size: 12px" class="mt-1">Camera</span>
+    </button>
+    <canvas id="canvas" hidden></canvas>
+    <div id="output" hidden>
+      <div id="outputMessage">No QR code detected.</div>
+      <div hidden><b>Data:</b> <span id="outputData"></span></div>
     </div>
     <script type="module" src="./qr-code.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>

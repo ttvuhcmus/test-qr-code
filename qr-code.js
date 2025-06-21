@@ -4,11 +4,9 @@
 
 "use strict";
 
-import QrScanner from "./qr-scanner.min.js";
-
 function getBankingInfo(decodedText) {
   $.ajax({
-    url: "/qrpay/banking_decode",
+    url: $("#qr-container").attr("get"),
     method: "GET",
     data: {
       text: decodedText,
@@ -53,7 +51,7 @@ class CameraQrScanner {
     this.stopButton = document.getElementById(stopButtonId);
     this.qrContainer = document.getElementById(qrContainerId);
     this.onScan = onScan;
-    this.qrScanner = new Html5Qrcode(scanContainerId);
+    // this.qrScanner = new Html5Qrcode(scanContainerId);
 
     this.bindEvents();
   }
@@ -62,10 +60,10 @@ class CameraQrScanner {
     this.startButton.addEventListener("click", (event) =>
       this.handleStartScan(event)
     );
-    this.stopButton.addEventListener("click", () => {
-      this.hideScanUI();
-      this.qrScanner.stop();
-    });
+    // this.stopButton.addEventListener("click", () => {
+    //   this.hideScanUI();
+    //   this.qrScanner.stop();
+    // });
   }
 
   async checkCameraPermission() {
@@ -77,61 +75,160 @@ class CameraQrScanner {
 
   async checkCameraAvailable() {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    // const videoInputs = devices.filter(
-    //   (device) => device.kind === "videoinput"
-    // );
-    devices.forEach((device) => {
-      console.log(device.kind);
-      console.log(device);
-    });
     return devices.some((device) => device.kind === "videoinput");
   }
 
   async handleStartScan(event) {
-    event.stopPropagation();
+    var video = document.createElement("video");
+    var canvasElement = document.getElementById("canvas");
+    var canvas = canvasElement.getContext("2d");
+    var loadingMessage = document.getElementById("loadingMessage");
+    var outputContainer = document.getElementById("output");
+    var outputMessage = document.getElementById("outputMessage");
+    var outputData = document.getElementById("outputData");
 
-    try {
-      const hasCamera = await this.checkCameraAvailable();
-      if (!hasCamera) throw new Error("No camera found on this device");
-
-      const hasPermission = await this.checkCameraPermission();
-      if (!hasPermission) {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-      }
-
-      this.showScanUI();
-
-      await this.qrScanner.start(
-        { facingMode: { exact: "environment" } },
-        {
-          fps: 10,
-          qrbox: 150,
-          aspectRatio: 3 / 2,
-          // aspectRatio: 1,
-          // aspectRatio: 1, //x/3 / 2,
-          // aspectRatio: 3 / 2,
-          // qrbox: {
-          //   width: 150,
-          //   height: 150,
-          // },
-          //{ width: 150, height: 100 },
-          // rememberLastUsedCamera: true,
-          // supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-          videoConstraints: {
-            // width: { exact: 300 },
-            // height: { exact: 200 },
-            facingMode: "environment",
-          },
-        },
-        (decodedText) => {
-          this.onScan(decodedText);
-          this.hideScanUI();
-          this.qrScanner.stop();
-        }
-      );
-    } catch (error) {
-      console.error(error.message);
+    function drawLine(begin, end, color) {
+      canvas.beginPath();
+      canvas.moveTo(begin.x, begin.y);
+      canvas.lineTo(end.x, end.y);
+      canvas.lineWidth = 4;
+      canvas.strokeStyle = color;
+      canvas.stroke();
     }
+
+    // Use facingMode: environment to attemt to get the front camera on phones
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: "environment" } })
+      .then(function (stream) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+        video.play();
+        requestAnimationFrame(tick);
+      });
+
+    function tick() {
+      loadingMessage.innerText = "⌛ Loading video...";
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        loadingMessage.hidden = true;
+        canvasElement.hidden = false;
+        outputContainer.hidden = false;
+
+        const CANVAS_WIDTH = 360;
+        const CANVAS_HEIGHT = 200;
+
+        canvasElement.height = CANVAS_HEIGHT;
+        canvasElement.width = CANVAS_WIDTH;
+
+        // Tính tỷ lệ giữa video và canvas
+        const videoRatio = video.videoWidth / video.videoHeight;
+        const canvasRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+
+        let drawWidth, drawHeight, offsetX, offsetY;
+
+        if (videoRatio > canvasRatio) {
+          // Video rộng hơn canvas → fit theo chiều cao
+          drawHeight = CANVAS_HEIGHT;
+          drawWidth = video.videoWidth * (CANVAS_HEIGHT / video.videoHeight);
+          offsetX = -(drawWidth - CANVAS_WIDTH) / 2;
+          offsetY = 0;
+        } else {
+          // Video cao hơn canvas → fit theo chiều rộng
+          drawWidth = CANVAS_WIDTH;
+          drawHeight = video.videoHeight * (CANVAS_WIDTH / video.videoWidth);
+          offsetX = 0;
+          offsetY = -(drawHeight - CANVAS_HEIGHT) / 2;
+        }
+
+        canvas.drawImage(
+          video,
+          0,
+          0,
+          canvasElement.width,
+          canvasElement.height
+        );
+
+        var imageData = canvas.getImageData(
+          0,
+          0,
+          canvasElement.width,
+          canvasElement.height
+        );
+        var code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+
+        if (code) {
+          drawLine(
+            code.location.topLeftCorner,
+            code.location.topRightCorner,
+            "#FF3B58"
+          );
+          drawLine(
+            code.location.topRightCorner,
+            code.location.bottomRightCorner,
+            "#FF3B58"
+          );
+          drawLine(
+            code.location.bottomRightCorner,
+            code.location.bottomLeftCorner,
+            "#FF3B58"
+          );
+          drawLine(
+            code.location.bottomLeftCorner,
+            code.location.topLeftCorner,
+            "#FF3B58"
+          );
+          outputMessage.hidden = true;
+          outputData.parentElement.hidden = false;
+          outputData.innerText = code.data;
+        } else {
+          outputMessage.hidden = false;
+          outputData.parentElement.hidden = true;
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // event.stopPropagation();
+
+    // try {
+    //   const hasCamera = await this.checkCameraAvailable();
+    //   if (!hasCamera) throw new Error('No camera found on this device');
+
+    //   const hasPermission = await this.checkCameraPermission();
+    //   if (!hasPermission) {
+    //     await navigator.mediaDevices.getUserMedia({ video: true });
+    //   }
+
+    //   this.showScanUI()
+
+    //   await this.qrScanner.start(
+    //     { facingMode: { exact: "environment" } },
+    //     {
+    //       fps: 10,
+    //       qrbox: 150,
+    //       aspectRatio: 3 / 2,
+    //       videoConstraints: {
+    //         facingMode: "environment",
+    //       },
+    //     },
+    //     (decodedText) => {
+    //       this.onScan(decodedText);
+    //       this.hideScanUI();
+    //       this.qrScanner.stop();
+    //     }
+    //   );
+    // } catch (error) {
+    //   Swal.fire({
+    //     title: 'Error!',
+    //     text: error.message,
+    //     icon: 'error',
+    //     customClass: {
+    //       confirmButton: 'btn btn-primary waves-effect waves-light'
+    //     },
+    //     buttonsStyling: false
+    //   });
+    // }
   }
 
   showScanUI() {
@@ -147,77 +244,10 @@ class CameraQrScanner {
   }
 }
 
-class UploadQrScanner {
-  constructor({ uploadButtonId, fileInputId, qrContainerId, onScan }) {
-    this.uploadButton = document.getElementById(uploadButtonId);
-    this.fileInput = document.getElementById(fileInputId);
-    this.qrContainer = document.getElementById(qrContainerId);
-    this.onScan = onScan;
-
-    this.bindEvents();
-  }
-
-  bindEvents() {
-    this.uploadButton.addEventListener("click", (event) =>
-      this.handleUploadClick(event)
-    );
-
-    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-      this.qrContainer.addEventListener(eventName, (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      });
-    });
-
-    this.qrContainer.addEventListener("drop", (event) =>
-      this.handleDrop(event)
-    );
-    this.fileInput.addEventListener("change", (event) =>
-      this.handleFileInput(event)
-    );
-  }
-
-  handleUploadClick(event) {
-    event.stopPropagation();
-    this.fileInput.click();
-  }
-
-  handleDrop(event) {
-    const files = event.dataTransfer.files;
-    this.fileInput.files = files;
-
-    const changeEvent = new Event("change", { bubbles: true });
-    this.fileInput.dispatchEvent(changeEvent);
-  }
-
-  handleFileInput(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    this.scanImage(file);
-  }
-
-  async scanImage(file) {
-    try {
-      const decodedText = await QrScanner.scanImage(file);
-      this.onScan(decodedText);
-    } catch (error) {
-      console.error("Unable to detect any QR code. Please try another image!");
-    }
-  }
-}
-
 new CameraQrScanner({
   scanContainerId: "reader",
   startButtonId: "btn-start-scan",
   stopButtonId: "btn-stop-scan",
-  qrContainerId: "qr-container",
-  onScan: getBankingInfo,
-});
-
-new UploadQrScanner({
-  uploadButtonId: "btn-upload-file",
-  fileInputId: "qr-file-input",
   qrContainerId: "qr-container",
   onScan: getBankingInfo,
 });
