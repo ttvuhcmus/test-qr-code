@@ -99,7 +99,13 @@ class CameraQrScanner {
         {
           fps: 10,
           qrbox: 150,
-          videoConstraints: { width: { min: 150 }, height: { max: 150 } },
+          rememberLastUsedCamera: true,
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          videoConstraints: {
+            width: { min: 150 },
+            height: { max: 150 },
+            facingMode: { exact: "environment" },
+          },
         },
         (decodedText) => {
           this.onScan(decodedText);
