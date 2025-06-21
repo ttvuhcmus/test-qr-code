@@ -102,7 +102,7 @@ class CameraQrScanner {
       this.showScanUI();
 
       await this.qrScanner.start(
-        { facingMode: { facingMode: "environment" } },
+        { facingMode: "environment" },
         {
           fps: 10,
           qrbox: 150,
@@ -119,7 +119,7 @@ class CameraQrScanner {
           videoConstraints: {
             // width: { exact: 300 },
             // height: { exact: 200 },
-            // facingMode: { exact: "environment" },
+            facingMode: "environment",
           },
         },
         (decodedText) => {
