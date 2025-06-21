@@ -40,6 +40,8 @@ function getBankingInfo(decodedText) {
   });
 }
 
+console.log("===", document.querySelectorAll("#reader"));
+
 class CameraQrScanner {
   constructor({
     scanContainerId,
