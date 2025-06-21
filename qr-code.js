@@ -106,15 +106,16 @@ class CameraQrScanner {
         {
           fps: 10,
           qrbox: 150,
-          // aspectRatio: 1, //3 / 2,
+          aspectRatio: 1,
+          // aspectRatio: 1, //x/3 / 2,
           // aspectRatio: 3 / 2,
           // qrbox: {
           //   width: 150,
           //   height: 150,
           // },
           //{ width: 150, height: 100 },
-          rememberLastUsedCamera: true,
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          // rememberLastUsedCamera: true,
+          // supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
           videoConstraints: {
             // width: { exact: 300 },
             // height: { exact: 200 },
