@@ -81,6 +81,7 @@ class CameraQrScanner {
     //   (device) => device.kind === "videoinput"
     // );
     devices.forEach((device) => {
+      console.log(device.kind);
       console.log(device);
     });
     return devices.some((device) => device.kind === "videoinput");
