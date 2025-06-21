@@ -40,8 +40,6 @@ function getBankingInfo(decodedText) {
   });
 }
 
-console.log("===", document.querySelectorAll("#reader"));
-
 class CameraQrScanner {
   constructor({
     scanContainerId,
@@ -79,6 +77,10 @@ class CameraQrScanner {
 
   async checkCameraAvailable() {
     const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = devices.filter(
+      (device) => device.kind === "videoinput"
+    );
+    console.log(videoInputs); // Hiển thị danh sách camera (front/back nếu có)
     return devices.some((device) => device.kind === "videoinput");
   }
 
@@ -97,7 +99,7 @@ class CameraQrScanner {
       this.showScanUI();
 
       await this.qrScanner.start(
-        { facingMode: { exact: "environment" } },
+        { facingMode: { facingMode: "environment" } },
         {
           fps: 10,
           qrbox: 150,
@@ -108,8 +110,8 @@ class CameraQrScanner {
           //   height: 150,
           // },
           //{ width: 150, height: 100 },
-          // rememberLastUsedCamera: true,
-          // supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          rememberLastUsedCamera: true,
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
           videoConstraints: {
             // width: { exact: 300 },
             // height: { exact: 200 },
