@@ -95,7 +95,7 @@ class CameraQrScanner {
       this.showScanUI();
 
       await this.qrScanner.start(
-        { facingMode: "environment" },
+        { facingMode: { exact: "environment" } },
         {
           fps: 10,
           qrbox: 150,
