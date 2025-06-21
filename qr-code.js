@@ -82,7 +82,7 @@ class CameraQrScanner {
     var video = document.createElement("video");
     var canvasElement = document.getElementById("canvas");
     var canvas = canvasElement.getContext("2d");
-    var loadingMessage = document.getElementById("loadingMessage");
+    // var loadingMessage = document.getElementById("loadingMessage");
     var outputContainer = document.getElementById("output");
     var outputMessage = document.getElementById("outputMessage");
     var outputData = document.getElementById("outputData");
@@ -107,52 +107,42 @@ class CameraQrScanner {
       });
 
     function tick() {
-      loadingMessage.innerText = "⌛ Loading video...";
+      // loadingMessage.innerText = "⌛ Loading video...";
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        loadingMessage.hidden = true;
+        // loadingMessage.hidden = true;
         canvasElement.hidden = false;
         outputContainer.hidden = false;
 
-        const CANVAS_WIDTH = 360;
-        const CANVAS_HEIGHT = 200;
+        const CANVAS_WIDTH = 1000;
+        const CANVAS_HEIGHT = 500;
 
         canvasElement.height = CANVAS_HEIGHT;
         canvasElement.width = CANVAS_WIDTH;
 
         // Tính tỷ lệ giữa video và canvas
-        const videoRatio = video.videoWidth / video.videoHeight;
-        const canvasRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+        const videoAspectRatio = video.videoWidth / video.videoHeight;
+        const canvasAspectRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
 
-        let drawWidth, drawHeight, offsetX, offsetY;
+        let renderWidth, renderHeight, xOffset, yOffset;
 
-        if (videoRatio > canvasRatio) {
+        if (videoAspectRatio > canvasAspectRatio) {
           // Video rộng hơn canvas → fit theo chiều cao
-          drawHeight = CANVAS_HEIGHT;
-          drawWidth = video.videoWidth * (CANVAS_HEIGHT / video.videoHeight);
-          offsetX = -(drawWidth - CANVAS_WIDTH) / 2;
-          offsetY = 0;
+          renderHeight = CANVAS_HEIGHT;
+          renderWidth = renderHeight * videoAspectRatio;
+          xOffset = (CANVAS_WIDTH - renderWidth) / 2;
+          yOffset = 0;
         } else {
           // Video cao hơn canvas → fit theo chiều rộng
-          drawWidth = CANVAS_WIDTH;
-          drawHeight = video.videoHeight * (CANVAS_WIDTH / video.videoWidth);
-          offsetX = 0;
-          offsetY = -(drawHeight - CANVAS_HEIGHT) / 2;
+          renderWidth = CANVAS_WIDTH;
+          renderHeight = renderWidth / videoAspectRatio;
+          xOffset = 0;
+          yOffset = (CANVAS_HEIGHT - renderHeight) / 2;
         }
 
-        canvas.drawImage(
-          video,
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
+        canvas.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        canvas.drawImage(video, xOffset, yOffset, renderWidth, renderHeight);
 
-        var imageData = canvas.getImageData(
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
+        var imageData = canvas.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         var code = jsQR(imageData.data, imageData.width, imageData.height, {
           inversionAttempts: "dontInvert",
         });
