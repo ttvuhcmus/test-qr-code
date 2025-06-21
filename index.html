@@ -15,15 +15,19 @@
         flex-direction: column;
       }
       #qr-shaded-region {
-        border-width: 9.5px 75px !important;
+        border-width: 25px 75px !important;
+      }
+      #reader video {
+        height: 200px;
+        object-fit: cover;
       }
     </style>
-    <script src="./html5-qrcode.min-new.js"></script>
+    <script src="./html5-qrcode.min.js"></script>
     <title>Document</title>
   </head>
   <body style="width: 300px">
     <div class="mb-5" style="position: relative">
-      <div id="reader" style="width: 100%; height: 200px; display: none"></div>
+      <div id="reader" style="display: none"></div>
       <button
         id="btn-stop-scan"
         type="button"
