@@ -98,7 +98,13 @@ class CameraQrScanner {
 
     // Use facingMode: environment to attemt to get the front camera on phones
     navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: "environment" } })
+      .getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+      })
       .then(function (stream) {
         video.srcObject = stream;
         video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
@@ -113,8 +119,8 @@ class CameraQrScanner {
         canvasElement.hidden = false;
         outputContainer.hidden = false;
 
-        const CANVAS_WIDTH = 1000;
-        const CANVAS_HEIGHT = 500;
+        const CANVAS_WIDTH = 300;
+        const CANVAS_HEIGHT = 200;
 
         canvasElement.height = CANVAS_HEIGHT;
         canvasElement.width = CANVAS_WIDTH;
