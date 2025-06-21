@@ -106,7 +106,7 @@ class CameraQrScanner {
           videoConstraints: {
             width: { min: 150 },
             height: { max: 150 },
-            facingMode: { exact: "environment" },
+            // facingMode: { exact: "environment" },
           },
         },
         (decodedText) => {
@@ -116,7 +116,7 @@ class CameraQrScanner {
         }
       );
     } catch (error) {
-      alert(error.message);
+      console.error(error.message);
     }
   }
 
@@ -188,7 +188,7 @@ class UploadQrScanner {
       const decodedText = await QrScanner.scanImage(file);
       this.onScan(decodedText);
     } catch (error) {
-      alert("Unable to detect any QR code. Please try another image!");
+      console.error("Unable to detect any QR code. Please try another image!");
     }
   }
 }
