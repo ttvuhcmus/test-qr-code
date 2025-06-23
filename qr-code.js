@@ -5,37 +5,7 @@
 "use strict";
 
 function getBankingInfo(decodedText) {
-  $.ajax({
-    url: $("#qr-container").attr("get"),
-    method: "GET",
-    data: {
-      text: decodedText,
-    },
-    success: function (data) {
-      const bankCode = $("#bank-code"),
-        accountNo = $("#account-no"),
-        accountName = $("#account-name"),
-        bankingAmount = $("#banking-amount"),
-        bankingMessage = $("#banking-message");
-
-      bankCode.val(data.bankCode).trigger("change");
-
-      accountNo.val(data.accountNo);
-      accountNo.focus();
-      requestAnimationFrame(() => {
-        accountNo.blur();
-        accountName.focus();
-      });
-
-      bankingAmount.val(data.amount);
-      new Cleave(bankingAmount, {
-        numeral: true,
-        numeralThousandsGroupStyle: "thousand",
-      });
-
-      bankingMessage.val(data.memo);
-    },
-  });
+  console.log(decodedText);
 }
 
 class CameraQrScanner {
@@ -117,17 +87,7 @@ class CameraQrScanner {
 
       this.scanning = true;
       this.tick();
-    } catch (error) {
-      Swal.fire({
-        title: "Error!",
-        text: error.message,
-        icon: "error",
-        customClass: {
-          confirmButton: "btn btn-primary waves-effect waves-light",
-        },
-        buttonsStyling: false,
-      });
-    }
+    } catch (error) {}
   }
 
   tick() {
@@ -375,17 +335,7 @@ class UploadQrScanner {
       const result = jsQR(imageData.data, canvas.width, canvas.height);
 
       this.onScan(result.data);
-    } catch (error) {
-      Swal.fire({
-        title: "Error!",
-        text: "Unable to detect any QR code. Please try another image!",
-        icon: "error",
-        customClass: {
-          confirmButton: "btn btn-primary waves-effect waves-light",
-        },
-        buttonsStyling: false,
-      });
-    }
+    } catch (error) {}
   }
 }
 
