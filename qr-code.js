@@ -5,7 +5,37 @@
 "use strict";
 
 function getBankingInfo(decodedText) {
-  console.log(decodedText);
+  $.ajax({
+    url: $("#qr-container").attr("get"),
+    method: "GET",
+    data: {
+      text: decodedText,
+    },
+    success: function (data) {
+      const bankCode = $("#bank-code"),
+        accountNo = $("#account-no"),
+        accountName = $("#account-name"),
+        bankingAmount = $("#banking-amount"),
+        bankingMessage = $("#banking-message");
+
+      bankCode.val(data.bankCode).trigger("change");
+
+      accountNo.val(data.accountNo);
+      accountNo.focus();
+      requestAnimationFrame(() => {
+        accountNo.blur();
+        accountName.focus();
+      });
+
+      bankingAmount.val(data.amount);
+      new Cleave(bankingAmount, {
+        numeral: true,
+        numeralThousandsGroupStyle: "thousand",
+      });
+
+      bankingMessage.val(data.memo);
+    },
+  });
 }
 
 class CameraQrScanner {
@@ -23,7 +53,7 @@ class CameraQrScanner {
     this.rafId = null;
 
     this.tick = this.tick.bind(this);
-    this.draw = this.draw.bind(this);
+    this.drawQRBox = this.drawQRBox.bind(this);
 
     this.bindEvents();
   }
@@ -132,7 +162,7 @@ class CameraQrScanner {
         renderWidth,
         renderHeight
       );
-      this.draw();
+      this.drawQRBox();
 
       const size = 170;
       const centerX = this.canvas.width / 2;
@@ -142,13 +172,6 @@ class CameraQrScanner {
       const startY = Math.floor(centerY - size / 2);
 
       const imageData = this.ctx.getImageData(startX, startY, size, size);
-
-      // const imageData = this.ctx.getImageData(
-      //   0,
-      //   0,
-      //   this.canvas.width,
-      //   this.canvas.height
-      // );
       const result = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
@@ -164,7 +187,7 @@ class CameraQrScanner {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
-  draw() {
+  drawQRBox() {
     const ctx = this.ctx;
     const canvas = this.canvas;
 
