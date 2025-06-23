@@ -5,53 +5,24 @@
 "use strict";
 
 function getBankingInfo(decodedText) {
-  $.ajax({
-    url: $("#qr-container").attr("get"),
-    method: "GET",
-    data: {
-      text: decodedText,
-    },
-    success: function (data) {
-      const bankCode = $("#bank-code"),
-        accountNo = $("#account-no"),
-        accountName = $("#account-name"),
-        bankingAmount = $("#banking-amount"),
-        bankingMessage = $("#banking-message");
-
-      bankCode.val(data.bankCode).trigger("change");
-
-      accountNo.val(data.accountNo);
-      accountNo.focus();
-      requestAnimationFrame(() => {
-        accountNo.blur();
-        accountName.focus();
-      });
-
-      bankingAmount.val(data.amount);
-      new Cleave(bankingAmount, {
-        numeral: true,
-        numeralThousandsGroupStyle: "thousand",
-      });
-
-      bankingMessage.val(data.memo);
-    },
-  });
+  console.log(decodedText);
 }
 
 class CameraQrScanner {
-  constructor({
-    scanContainerId,
-    startButtonId,
-    stopButtonId,
-    qrContainerId,
-    onScan,
-  }) {
-    this.scanContainer = document.getElementById(scanContainerId);
+  constructor({ startButtonId, stopButtonId, qrContainerId, onScan }) {
     this.startButton = document.getElementById(startButtonId);
     this.stopButton = document.getElementById(stopButtonId);
     this.qrContainer = document.getElementById(qrContainerId);
     this.onScan = onScan;
-    // this.qrScanner = new Html5Qrcode(scanContainerId);
+
+    this.stream = null;
+    this.video = null;
+    this.canvas = document.getElementById("canvas");
+    this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+    this.scanning = false;
+    this.rafId = null;
+
+    this.tick = this.tick.bind(this);
 
     this.bindEvents();
   }
@@ -60,10 +31,10 @@ class CameraQrScanner {
     this.startButton.addEventListener("click", (event) =>
       this.handleStartScan(event)
     );
-    // this.stopButton.addEventListener("click", () => {
-    //   this.hideScanUI();
-    //   this.qrScanner.stop();
-    // });
+    this.stopButton.addEventListener("click", () => {
+      this.hideScanUI();
+      this.handleStopScan();
+    });
   }
 
   async checkCameraPermission() {
@@ -79,160 +50,212 @@ class CameraQrScanner {
   }
 
   async handleStartScan(event) {
-    const video = document.createElement("video");
-    const canvasElement = document.getElementById("canvas");
-    const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
-    const outputContainer = document.getElementById("output");
+    event.stopPropagation();
 
-    function drawLine(begin, end, color) {
-      canvas.beginPath();
-      canvas.moveTo(begin.x, begin.y);
-      canvas.lineTo(end.x, end.y);
-      canvas.lineWidth = 4;
-      canvas.strokeStyle = color;
-      canvas.stroke();
-    }
+    try {
+      const hasCamera = await this.checkCameraAvailable();
+      if (!hasCamera) throw new Error("No camera found on this device");
 
-    // Use facingMode: environment to attemt to get the front camera on phones
-    navigator.mediaDevices
-      .getUserMedia({
+      const hasCameraPermission = await this.checkCameraPermission();
+      if (!hasCameraPermission) {
+        throw new Error(
+          "Camera access was denied. Please grant permission to continue."
+        );
+      }
+
+      const constraints = {
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 640 },
           height: { ideal: 480 },
         },
-      })
-      .then(function (stream) {
-        video.srcObject = stream;
-        video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
-        video.play();
-        requestAnimationFrame(tick);
+      };
+      this.stream = await new Promise((resolve) => {
+        navigator.mediaDevices
+          .getUserMedia(constraints)
+          .then(resolve)
+          .catch(console.error);
       });
 
-    function tick() {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvasElement.hidden = false;
-        outputContainer.hidden = false;
+      this.showScanUI();
 
-        canvasElement.width = 300;
-        canvasElement.height = 200;
+      this.video = document.createElement("video");
+      this.video.srcObject = this.stream;
+      this.video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+      await this.video.play();
 
-        const videoAspectRatio = video.videoWidth / video.videoHeight;
-        const canvasAspectRatio = canvasElement.width / canvasElement.height;
+      this.scanning = true;
+      this.tick();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-        let renderWidth, renderHeight, xOffset, yOffset;
+  tick() {
+    if (!this.scanning) return;
 
-        if (videoAspectRatio > canvasAspectRatio) {
-          renderHeight = canvasElement.height;
-          renderWidth = renderHeight * videoAspectRatio;
-          xOffset = (canvasElement.width - renderWidth) / 2;
-          yOffset = 0;
-        } else {
-          renderWidth = canvasElement.width;
-          renderHeight = renderWidth / videoAspectRatio;
-          xOffset = 0;
-          yOffset = (canvasElement.height - renderHeight) / 2;
-        }
+    if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+      this.canvas.width = 360;
+      this.canvas.height = 500;
 
-        canvas.clearRect(0, 0, canvasElement.width, canvasElement.height);
-        canvas.drawImage(video, xOffset, yOffset, renderWidth, renderHeight);
+      const videoAspectRatio = this.video.videoWidth / this.video.videoHeight;
+      const canvasAspectRatio = this.canvas.width / this.canvas.height;
 
-        const imageData = canvas.getImageData(
-          0,
-          0,
-          canvasElement.width,
-          canvasElement.height
-        );
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert",
-        });
+      let renderWidth, renderHeight, xOffset, yOffset;
 
-        if (code) {
-          drawLine(
-            code.location.topLeftCorner,
-            code.location.topRightCorner,
-            "#FF3B58"
-          );
-          drawLine(
-            code.location.topRightCorner,
-            code.location.bottomRightCorner,
-            "#FF3B58"
-          );
-          drawLine(
-            code.location.bottomRightCorner,
-            code.location.bottomLeftCorner,
-            "#FF3B58"
-          );
-          drawLine(
-            code.location.bottomLeftCorner,
-            code.location.topLeftCorner,
-            "#FF3B58"
-          );
-          alert(code.data);
-        }
+      if (videoAspectRatio > canvasAspectRatio) {
+        renderHeight = this.canvas.height;
+        renderWidth = renderHeight * videoAspectRatio;
+        xOffset = (this.canvas.width - renderWidth) / 2;
+        yOffset = 0;
+      } else {
+        renderWidth = this.canvas.width;
+        renderHeight = renderWidth / videoAspectRatio;
+        xOffset = 0;
+        yOffset = (this.canvas.height - renderHeight) / 2;
       }
-      requestAnimationFrame(tick);
+
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(
+        this.video,
+        xOffset,
+        yOffset,
+        renderWidth,
+        renderHeight
+      );
+
+      const imageData = this.ctx.getImageData(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+      const result = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "dontInvert",
+      });
+
+      if (result) {
+        this.onScan(result.data);
+        this.hideScanUI();
+        this.handleStopScan();
+        return;
+      }
     }
 
-    // event.stopPropagation();
+    this.rafId = requestAnimationFrame(this.tick);
+  }
 
-    // try {
-    //   const hasCamera = await this.checkCameraAvailable();
-    //   if (!hasCamera) throw new Error('No camera found on this device');
-
-    //   const hasPermission = await this.checkCameraPermission();
-    //   if (!hasPermission) {
-    //     await navigator.mediaDevices.getUserMedia({ video: true });
-    //   }
-
-    //   this.showScanUI()
-
-    //   await this.qrScanner.start(
-    //     { facingMode: { exact: "environment" } },
-    //     {
-    //       fps: 10,
-    //       qrbox: 150,
-    //       aspectRatio: 3 / 2,
-    //       videoConstraints: {
-    //         facingMode: "environment",
-    //       },
-    //     },
-    //     (decodedText) => {
-    //       this.onScan(decodedText);
-    //       this.hideScanUI();
-    //       this.qrScanner.stop();
-    //     }
-    //   );
-    // } catch (error) {
-    //   Swal.fire({
-    //     title: 'Error!',
-    //     text: error.message,
-    //     icon: 'error',
-    //     customClass: {
-    //       confirmButton: 'btn btn-primary waves-effect waves-light'
-    //     },
-    //     buttonsStyling: false
-    //   });
-    // }
+  handleStopScan() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    if (this.stream) {
+      this.stream.getTracks().forEach((track) => track.stop());
+      this.stream = null;
+    }
+    if (this.video) {
+      this.video.pause();
+      this.video.srcObject = null;
+      this.video = null;
+    }
+    this.scanning = false;
   }
 
   showScanUI() {
-    this.scanContainer.style.display = "block";
+    this.canvas.style.display = "block";
     this.stopButton.style.setProperty("display", "inline-flex", "important");
     this.qrContainer.style.display = "none";
   }
 
   hideScanUI() {
-    this.scanContainer.style.display = "none";
+    this.canvas.style.display = "none";
     this.stopButton.style.setProperty("display", "none", "important");
     this.qrContainer.style.display = "flex";
   }
 }
 
+class UploadQrScanner {
+  constructor({ uploadButtonId, fileInputId, qrContainerId, onScan }) {
+    this.uploadButton = document.getElementById(uploadButtonId);
+    this.fileInput = document.getElementById(fileInputId);
+    this.qrContainer = document.getElementById(qrContainerId);
+    this.onScan = onScan;
+
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    this.uploadButton.addEventListener("click", (event) =>
+      this.handleUploadClick(event)
+    );
+
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+      this.qrContainer.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    });
+
+    this.qrContainer.addEventListener("drop", (event) =>
+      this.handleDrop(event)
+    );
+    this.fileInput.addEventListener("change", (event) =>
+      this.handleFileInput(event)
+    );
+  }
+
+  handleUploadClick(event) {
+    event.stopPropagation();
+    this.fileInput.click();
+  }
+
+  handleDrop(event) {
+    const files = event.dataTransfer.files;
+    this.fileInput.files = files;
+
+    const changeEvent = new Event("change", { bubbles: true });
+    this.fileInput.dispatchEvent(changeEvent);
+  }
+
+  handleFileInput(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.scanImage(file);
+  }
+
+  async scanImage(file) {
+    try {
+      const bitmap = await createImageBitmap(file);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = jsQR(imageData.data, canvas.width, canvas.height);
+
+      this.onScan(result.data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+}
+
 new CameraQrScanner({
-  scanContainerId: "reader",
   startButtonId: "btn-start-scan",
   stopButtonId: "btn-stop-scan",
+  qrContainerId: "qr-container",
+  onScan: getBankingInfo,
+});
+
+new UploadQrScanner({
+  uploadButtonId: "btn-upload-file",
+  fileInputId: "qr-file-input",
   qrContainerId: "qr-container",
   onScan: getBankingInfo,
 });
