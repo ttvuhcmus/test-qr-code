@@ -5,7 +5,37 @@
 "use strict";
 
 function getBankingInfo(decodedText) {
-  console.log(decodedText);
+  $.ajax({
+    url: $("#qr-container").attr("get"),
+    method: "GET",
+    data: {
+      text: decodedText,
+    },
+    success: function (data) {
+      const bankCode = $("#bank-code"),
+        accountNo = $("#account-no"),
+        accountName = $("#account-name"),
+        bankingAmount = $("#banking-amount"),
+        bankingMessage = $("#banking-message");
+
+      bankCode.val(data.bankCode).trigger("change");
+
+      accountNo.val(data.accountNo);
+      accountNo.focus();
+      requestAnimationFrame(() => {
+        accountNo.blur();
+        accountName.focus();
+      });
+
+      bankingAmount.val(data.amount);
+      new Cleave(bankingAmount, {
+        numeral: true,
+        numeralThousandsGroupStyle: "thousand",
+      });
+
+      bankingMessage.val(data.memo);
+    },
+  });
 }
 
 class CameraQrScanner {
@@ -23,6 +53,7 @@ class CameraQrScanner {
     this.rafId = null;
 
     this.tick = this.tick.bind(this);
+    this.draw = this.draw.bind(this);
 
     this.bindEvents();
   }
@@ -87,7 +118,15 @@ class CameraQrScanner {
       this.scanning = true;
       this.tick();
     } catch (error) {
-      console.error(error);
+      Swal.fire({
+        title: "Error!",
+        text: error.message,
+        icon: "error",
+        customClass: {
+          confirmButton: "btn btn-primary waves-effect waves-light",
+        },
+        buttonsStyling: false,
+      });
     }
   }
 
@@ -96,7 +135,7 @@ class CameraQrScanner {
 
     if (this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
       this.canvas.width = 360;
-      this.canvas.height = 500;
+      this.canvas.height = 200;
 
       const videoAspectRatio = this.video.videoWidth / this.video.videoHeight;
       const canvasAspectRatio = this.canvas.width / this.canvas.height;
@@ -116,6 +155,7 @@ class CameraQrScanner {
       }
 
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
       this.ctx.drawImage(
         this.video,
         xOffset,
@@ -123,13 +163,23 @@ class CameraQrScanner {
         renderWidth,
         renderHeight
       );
+      this.draw();
 
-      const imageData = this.ctx.getImageData(
-        0,
-        0,
-        this.canvas.width,
-        this.canvas.height
-      );
+      const size = 170;
+      const centerX = this.canvas.width / 2;
+      const centerY = this.canvas.height / 2;
+
+      const startX = Math.floor(centerX - size / 2);
+      const startY = Math.floor(centerY - size / 2);
+
+      const imageData = this.ctx.getImageData(startX, startY, size, size);
+
+      // const imageData = this.ctx.getImageData(
+      //   0,
+      //   0,
+      //   this.canvas.width,
+      //   this.canvas.height
+      // );
       const result = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
@@ -143,6 +193,99 @@ class CameraQrScanner {
     }
 
     this.rafId = requestAnimationFrame(this.tick);
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const canvas = this.canvas;
+
+    const qrBoxWidth = 170;
+    const qrBoxHeight = 170;
+    const cornerLength = 30;
+    const cornerRadius = 16;
+
+    const qrX = (canvas.width - qrBoxWidth) / 2;
+    const qrY = (canvas.height - qrBoxHeight) / 2;
+
+    // === 1. Vẽ vùng phủ đen mờ, giữ lại vùng giữa ===
+    ctx.save();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height); // toàn màn
+
+    // Tạo lỗ vùng QR ở giữa bằng đường bo góc
+    ctx.moveTo(qrX + cornerRadius, qrY);
+    ctx.lineTo(qrX + qrBoxWidth - cornerRadius, qrY);
+    ctx.quadraticCurveTo(
+      qrX + qrBoxWidth,
+      qrY,
+      qrX + qrBoxWidth,
+      qrY + cornerRadius
+    );
+    ctx.lineTo(qrX + qrBoxWidth, qrY + qrBoxHeight - cornerRadius);
+    ctx.quadraticCurveTo(
+      qrX + qrBoxWidth,
+      qrY + qrBoxHeight,
+      qrX + qrBoxWidth - cornerRadius,
+      qrY + qrBoxHeight
+    );
+    ctx.lineTo(qrX + cornerRadius, qrY + qrBoxHeight);
+    ctx.quadraticCurveTo(
+      qrX,
+      qrY + qrBoxHeight,
+      qrX,
+      qrY + qrBoxHeight - cornerRadius
+    );
+    ctx.lineTo(qrX, qrY + cornerRadius);
+    ctx.quadraticCurveTo(qrX, qrY, qrX + cornerRadius, qrY);
+    ctx.closePath();
+
+    // Dùng evenodd để loại trừ vùng giữa
+    ctx.fill("evenodd");
+    ctx.restore();
+
+    // === 2. Vẽ 4 góc trắng ===
+    const drawCorner = (drawLine) => {
+      ctx.save();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      drawLine();
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    // Top-Left
+    drawCorner(() => {
+      ctx.beginPath();
+      ctx.moveTo(qrX, qrY + cornerLength);
+      ctx.lineTo(qrX, qrY);
+      ctx.lineTo(qrX + cornerLength, qrY);
+    });
+
+    // Top-Right
+    drawCorner(() => {
+      ctx.beginPath();
+      ctx.moveTo(qrX + qrBoxWidth - cornerLength, qrY);
+      ctx.lineTo(qrX + qrBoxWidth, qrY);
+      ctx.lineTo(qrX + qrBoxWidth, qrY + cornerLength);
+    });
+
+    // Bottom-Left
+    drawCorner(() => {
+      ctx.beginPath();
+      ctx.moveTo(qrX, qrY + qrBoxHeight - cornerLength);
+      ctx.lineTo(qrX, qrY + qrBoxHeight);
+      ctx.lineTo(qrX + cornerLength, qrY + qrBoxHeight);
+    });
+
+    // Bottom-Right
+    drawCorner(() => {
+      ctx.beginPath();
+      ctx.moveTo(qrX + qrBoxWidth - cornerLength, qrY + qrBoxHeight);
+      ctx.lineTo(qrX + qrBoxWidth, qrY + qrBoxHeight);
+      ctx.lineTo(qrX + qrBoxWidth, qrY + qrBoxHeight - cornerLength);
+    });
   }
 
   handleStopScan() {
@@ -241,7 +384,15 @@ class UploadQrScanner {
 
       this.onScan(result.data);
     } catch (error) {
-      console.error(error);
+      Swal.fire({
+        title: "Error!",
+        text: "Unable to detect any QR code. Please try another image!",
+        icon: "error",
+        customClass: {
+          confirmButton: "btn btn-primary waves-effect waves-light",
+        },
+        buttonsStyling: false,
+      });
     }
   }
 }
