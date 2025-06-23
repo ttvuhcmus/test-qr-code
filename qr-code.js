@@ -5,37 +5,7 @@
 "use strict";
 
 function getBankingInfo(decodedText) {
-  $.ajax({
-    url: $("#qr-container").attr("get"),
-    method: "GET",
-    data: {
-      text: decodedText,
-    },
-    success: function (data) {
-      const bankCode = $("#bank-code"),
-        accountNo = $("#account-no"),
-        accountName = $("#account-name"),
-        bankingAmount = $("#banking-amount"),
-        bankingMessage = $("#banking-message");
-
-      bankCode.val(data.bankCode).trigger("change");
-
-      accountNo.val(data.accountNo);
-      accountNo.focus();
-      requestAnimationFrame(() => {
-        accountNo.blur();
-        accountName.focus();
-      });
-
-      bankingAmount.val(data.amount);
-      new Cleave(bankingAmount, {
-        numeral: true,
-        numeralThousandsGroupStyle: "thousand",
-      });
-
-      bankingMessage.val(data.memo);
-    },
-  });
+  console.log(decodedText);
 }
 
 class CameraQrScanner {
@@ -155,7 +125,6 @@ class CameraQrScanner {
       }
 
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
       this.ctx.drawImage(
         this.video,
         xOffset,
